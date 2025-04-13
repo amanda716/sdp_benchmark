@@ -1,0 +1,9 @@
+torch 
+torchvision 
+torchaudio
+scipy 
+numpy 
+PyWavelets 
+transformers 
+scikit-learn
+pytest
