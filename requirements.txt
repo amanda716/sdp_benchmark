@@ -7,3 +7,5 @@ PyWavelets
 transformers 
 scikit-learn
 pytest
+pandas
+matplotlib

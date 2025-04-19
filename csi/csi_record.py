@@ -1,7 +1,7 @@
 import json
 
 
-class CSD_Struct:
+class CSI_Config:
     """Class representing the structure of a CSI record."""
 
     def __init__(self,
@@ -26,7 +26,7 @@ class CSD_Struct:
         self.target_fs = target_fs
 
     @classmethod
-    def create_record(cls, config):
+    def create_config(cls, config):
         return cls(**config)
 
     def to_dict(self):
