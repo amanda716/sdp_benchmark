@@ -20,7 +20,7 @@ dist/
 .ipynb_checkpoints/
 
 # IDE settings
-.vscode/
+# .vscode/
 .idea/
 
 # Test coverage reports

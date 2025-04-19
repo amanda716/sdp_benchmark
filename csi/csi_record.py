@@ -1,10 +1,8 @@
 import json
 
 
-class CSI_Record:
-    """_summary_
-    CSI record data object, it represents the core struct and its de/serialization
-    """
+class CSD_Struct:
+    """Class representing the structure of a CSI record."""
 
     def __init__(self,
                  record_length=268,
@@ -32,7 +30,21 @@ class CSI_Record:
         return cls(**config)
 
     def to_dict(self):
-        """Convert the record structure to a dictionary."""
+        """
+        Converts the attributes of the object into a dictionary representation.
+        Returns:
+            dict: A dictionary containing the following key-value pairs:
+                - "record_length" (int): The length of the record.
+                - "ts_count" (int): The timestamp count.
+                - "rssi_count" (int): The RSSI (Received Signal Strength Indicator) count.
+                - "mcs_count" (int): The MCS (Modulation and Coding Scheme) count.
+                - "gain_count" (int): The gain count.
+                - "csi_count" (int): The CSI (Channel State Information) count.
+                - "csi_num_subcarriers" (int): The number of subcarriers in the CSI.
+                - "csi_num_antennas" (int): The number of antennas in the CSI.
+                - "target_fs" (int): The target sampling frequency.
+        """
+        
         return {
             "record_length": self.record_length,
             "ts_count": self.ts_count,
@@ -46,7 +58,6 @@ class CSI_Record:
         }
 
     def save_to_json(self, filename):
-        """Save the record structure to a JSON file."""
         with open(filename, 'w') as file:
             json.dump(self.to_dict(), file, indent=4)
 
