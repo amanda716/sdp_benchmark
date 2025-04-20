@@ -74,3 +74,21 @@ class CSI_Config:
         except json.JSONDecodeError:
             print(f"Error: Invalid JSON format in '{filename}'.")
             return None
+
+class CSI_Record:
+    """Class representing a CSI record."""
+
+    def __init__(self):
+        """Initialize the Record with the given configuration."""
+        self.config = config
+        self.data = bytearray(config.record_length)
+        self.timestamp = None
+        self.rssi = None
+        self.mcs = None
+        self.gain = None
+        self.csi = None
+
+    def parse_record(self, record):
+        """Parse the record data into its components."""
+        # Implement parsing logic here
+        pass
