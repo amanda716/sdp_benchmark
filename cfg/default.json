@@ -1,0 +1,8 @@
+{
+    "name": "default",
+    "description": "Default configuration for the application.",
+    "version": "1.0.0",
+    "author": "Your Name",
+    "input_path": "./data/input",
+    "output_path": "./data/output"
+}

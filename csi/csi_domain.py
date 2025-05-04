@@ -1,7 +1,7 @@
 import json
 
 
-class CSI_Config:
+class CsiConfig:
     """Class representing the structure of a CSI record."""
 
     def __init__(self,

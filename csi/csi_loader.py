@@ -1,15 +1,51 @@
 
+import os
 import numpy as np
-from csi.csi_record import CSI_Config
+from csi.csi_domain import CsiConfig
 
 
-class CSI_Reader:
+class CsiDataLoader:
     """Class to read and parse CSI records from a text file."""
     BUFFER_SIZE = 1024 * 1024  # 1MB buffer size
 
-    def __init__(self, config: CSI_Config):
+    def __init__(self, config: CsiConfig):
         self.config = config
         self.records = []
+
+    def read_records_from_folder(self, folder: str):
+        """
+        Reads and processes records from all text files in a specified folder, 
+        excluding files that contain '_truth' in their name.
+        Args:
+            folder (str): The path to the folder containing the text files.
+        Returns:
+            list: A list of dictionaries, where each dictionary contains:
+                - "file_path" (str): The path of the processed file.
+                - "records" (list): A list of records read from the file.
+        """
+
+        file_data = []
+        for filename in os.listdir(folder):
+            if filename.endswith(".txt") and '_truth' not in filename:
+                # Skip files that contain '_truth' in their name
+                # and only process text files
+                file_path = os.path.join(folder, filename)
+                file_data.append({
+                    "file_path": file_path,
+                    "records": list(self.read_records(file_path))
+                })
+        return file_data
+
+    def random_check(self, file_data):
+        for data in file_data:
+            filename = data["filename"]
+            records = data["records"]
+            if len(records) > 0:
+                # Randomly check a record
+                record = records[0]
+                print(f"Filename: {filename}, First Record: {record}")
+            else:
+                print(f"No records found in {filename}")
 
     def read_records(self, filename: str):
         """
@@ -109,3 +145,23 @@ class CSI_Reader:
         except ValueError:
             # Return 0+0j if parsing fails
             return 0+0j
+        
+
+class CsiTruthDataLoader:
+    """Class to read and parse truth files."""
+
+    @staticmethod
+    def read_truth_file(truth_path: str):
+        """
+        Reads and parses a truth file.
+
+        Args:
+            filepath (str): The path to the truth file.
+
+        Returns:
+            list: A list of dictionaries, where each dictionary represents a truth record.
+        """
+        data = []
+        with open(truth_path, 'r', encoding="utf-8") as f:
+           data = f.read().strip().split()
+        return [int(x) for x in data]

@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import mock_open, patch
-from csi.csi_reader import CSI_Reader
-from csi.csi_record import CSI_Config
+from csi.csi_loader import CsiDataLoader
+from csi.csi_domain import CsiConfig
 
 @pytest.fixture
 def mock_config():
@@ -23,7 +23,7 @@ def mock_config():
 @pytest.fixture
 def csi_reader(mock_config):
     """Fixture to create a CSI_Reader instance."""
-    return CSI_Reader(config=mock_config)
+    return CsiDataLoader(config=mock_config)
 
 
 def test_read_records_complete_records(csi_reader):

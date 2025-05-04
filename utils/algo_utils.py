@@ -6,6 +6,7 @@ from pandas import DataFrame
 import pandas as pd
 from typing import List, Dict
 from scipy.signal import butter, filtfilt
+import torch
 
 
 def db_to_power(x):
@@ -38,7 +39,9 @@ def get_total_rss(rssi):
     avg_linear_rss = np.mean(linear_vals)
     return 10 * np.log10(avg_linear_rss)
 
-#TODO: below function needs to be refactored later
+# TODO: below function needs to be refactored later
+
+
 def interpolate_csi(df: DataFrame, target_time, num_subcarriers=30, num_antennas=4):
     """
     对 CSI 数据进行插值，统一采样率到100 Hz。
@@ -202,3 +205,195 @@ def apply_bandpass_filter(data, lowcut, highcut, fs, order=5):
     b, a = design_bandpass_filter(lowcut, highcut, fs, order=order)
     y = filtfilt(b, a, data)
     return y
+
+
+def get_doppler_spectrum_from_tensor(csi_tensor, timestamps,
+                                     rx_cnt=1, rx_acnt=4,
+                                     method='stft',
+                                     fs=100.0,                # 固定目标采样率
+                                     window_size_seconds=2.0,
+                                     hop_size_seconds=1.5):
+    """
+    生成多普勒谱。
+
+    参数:
+    - csi_tensor: 缩放后的CSI数据，形状为 (T, 30, 4)
+    - timestamps: 时间戳数组
+    - rx_cnt: 接收天线数（默认1）
+    - rx_acnt: 每个接收天线的子天线数（默认4）
+    - method: 生成多普勒谱的方法（默认'stft'）
+    - fs: 采样率（Hz）
+    - window_size_seconds: 窗口大小（秒）
+    - hop_size_seconds: 窗口跳跃大小（秒）
+
+    返回:
+    - doppler_spectrum: 多普勒谱，形状为 (rx_cnt, freq_bins, time_frames)
+    - freq_bin: 频率轴
+    - frame_timestamps: 每帧的时间戳
+    """
+    samp_rate = fs
+    half_rate = samp_rate / 2
+
+    # 设定带通滤波频率
+    lowcut = 2.0    # 低端2Hz
+    highcut = 40.0  # 高端40Hz
+
+    # Clamp highcut
+    if highcut > 0.99 * half_rate:
+        print(f"[clamp] highcut={highcut}超出Nyquist={half_rate},自动缩小")
+        highcut = 0.99 * half_rate
+    if lowcut < 0.01:
+        lowcut = 0.01
+    if lowcut >= highcut:
+        lowcut = 1.0
+        highcut = 0.99 * half_rate
+
+    print(
+        f"[Info] 采样率 fs={samp_rate}Hz, lowcut={lowcut}Hz, highcut={highcut}Hz")
+
+    # 设计带通滤波器
+    try:
+        b_band, a_band = design_bandpass_filter(
+            lowcut, highcut, samp_rate, order=5)
+    except ValueError as e:
+        print(f"[滤波器设计错误]: {e}")
+        return np.zeros((rx_cnt, 0, 0), dtype=np.float32), None, None
+
+    doppler_spectrum_list = []
+    freq_bin = None
+    frame_timestamps = []
+
+    for ii in range(rx_cnt):
+        start_antenna = ii * rx_acnt
+        end_antenna = start_antenna + rx_acnt
+        # 选前30子载波
+        csi_data = csi_tensor[:, :30,
+                              start_antenna:end_antenna].reshape(-1, 30 * rx_acnt)
+
+        # 选择最佳天线对
+        csi_mean = np.mean(np.abs(csi_data), axis=0)
+        csi_var = np.sqrt(np.var(np.abs(csi_data), axis=0) + 1e-9)
+        csi_mean_var_ratio = csi_mean / csi_var
+        try:
+            csi_mean_var_ratio_2d = csi_mean_var_ratio.reshape(
+                (30, rx_acnt), order='F')
+        except ValueError:
+            print(f"[reshape失败], skip rx={ii}")
+            continue
+        idx = np.argmax(np.mean(csi_mean_var_ratio_2d, axis=0))
+        start_col = idx * 30
+        end_col = (idx + 1) * 30
+        csi_data_ref = np.tile(csi_data[:, start_col:end_col], (1, rx_acnt))
+
+        # 幅度调整
+        csi_data_adj = np.zeros_like(csi_data, dtype=np.complex128)
+        csi_data_ref_adj = np.zeros_like(csi_data_ref, dtype=np.complex128)
+        alpha_sum = 0
+        for jj in range(30 * rx_acnt):
+            amp = np.abs(csi_data[:, jj])
+            amp_nonzero = amp[amp > 0]
+            alpha = np.min(amp_nonzero) if len(amp_nonzero) > 0 else 1e-6
+            alpha_sum += alpha
+            csi_data_adj[:, jj] = np.maximum(
+                amp - alpha, 0) * np.exp(1j * np.angle(csi_data[:, jj]))
+        beta = 1000 * alpha_sum / (30 * rx_acnt)
+        for jj in range(30 * rx_acnt):
+            amp_ref = np.abs(csi_data_ref[:, jj])
+            csi_data_ref_adj[:, jj] = (
+                amp_ref + beta) * np.exp(1j * np.angle(csi_data_ref[:, jj]))
+
+        # conj_mult
+        conj_mult = csi_data_adj * np.conjugate(csi_data_ref_adj)
+        # 去除 idx
+        conj_mult = np.concatenate(
+            [conj_mult[:, :start_col], conj_mult[:, end_col:]], axis=1)
+
+        # 带通滤波
+        for jj in range(conj_mult.shape[1]):
+            try:
+                conj_mult[:, jj] = filtfilt(b_band, a_band, conj_mult[:, jj])
+            except Exception as ex:
+                print(f"[Filter失败@列{jj}]: {ex}")
+                conj_mult[:, jj] = 0 + 0j
+
+        # PCA(只保留第1主成分)
+        try:
+            U, S, Vh = np.linalg.svd(conj_mult, full_matrices=False)
+            # conj_mult_pca => shape (T,)
+            conj_mult_pca = conj_mult @ Vh.conjugate().T[:, 0]
+        except np.linalg.LinAlgError as ex:
+            print(f"[PCA失败]: {ex}")
+            continue
+
+        # STFT
+        if method.lower() == 'stft':
+            window_size_samples = int(
+                round(window_size_seconds * samp_rate))  # 2.0 * 100 = 200
+            hop_size_samples = int(
+                round(hop_size_seconds * samp_rate))     # 1.5 * 100 = 150
+
+            print(f"nperseg: {window_size_samples}")
+            # 设置 nfft 至至少 nperseg，且通常选择 2 的幂次方
+            nfft = max(window_size_samples, 512)
+            print(f"nfft: {nfft}")
+            window = signal.windows.gaussian(
+                window_size_samples, std=window_size_samples / 6)
+            f, t, Zxx = signal.stft(
+                conj_mult_pca,
+                fs=samp_rate,
+                window=window,
+                nperseg=window_size_samples,
+                noverlap=window_size_samples - hop_size_samples,
+                nfft=nfft,  # 明确设置 nfft
+                boundary=None
+            )
+            print(
+                f"STFT result: f.shape={f.shape}, t.shape={t.shape}, Zxx.shape={Zxx.shape}")
+            freq_time_prof_allfreq = Zxx
+            # 选频
+            freq_lpf_sel = (f <= highcut)  # 仅保留 0 到 highcut 之间的频率
+            freq_time_prof = freq_time_prof_allfreq[freq_lpf_sel, :]
+            freq_bin = f[freq_lpf_sel]
+            # 幅度 & 每帧归一化
+            freq_time_prof = np.abs(freq_time_prof)
+            sum_val = np.sum(freq_time_prof, axis=0, keepdims=True) + 1e-9
+            freq_time_prof = freq_time_prof / sum_val
+            frame_timestamps = t
+        else:
+            # cwt 略示意
+            freq_bin = None
+            frame_timestamps = None
+            freq_time_prof = np.empty((0, 0), dtype=np.float32)
+
+        doppler_spectrum_list.append(freq_time_prof)
+
+    if len(doppler_spectrum_list) == 0:
+        return np.zeros((rx_cnt, 0, 0), dtype=np.float32), None, None
+    doppler_spectrum = np.stack(
+        doppler_spectrum_list, axis=0).astype(np.float32)
+    # (rx_cnt, freq_dim, time_frames)
+    print(f"Doppler Spectrum shape: {doppler_spectrum.shape}")
+
+    return doppler_spectrum, freq_bin, frame_timestamps
+
+
+def doppler_collate_fn(tuple_list):
+    """
+    tuple_list: list of tuples (doppler_tensor, rssi_tensor, label)
+        doppler_tensor: (2, freq_dim_i, 4)
+        rssi_tensor: (rssi_dim_i,)
+        label: int
+    返回:
+        doppler_list: list of torch.Tensor, each shape=(2, freq_dim_i, 4)
+        rssi_list: list of torch.Tensor, each shape=(rssi_dim_i,)
+        label_tensor: torch.Tensor of shape=(B,)
+    """
+    doppler_list = []
+    rssi_list = []
+    label_list = []
+    for (dopp_t, rssi_t, lab) in tuple_list:
+        doppler_list.append(dopp_t)      # (2, freq_dim_i, 4)
+        rssi_list.append(rssi_t)        # (rssi_dim_i,)
+        label_list.append(lab)           # int
+    label_tensor = torch.tensor(label_list, dtype=torch.long)
+    return doppler_list, rssi_list, label_tensor
