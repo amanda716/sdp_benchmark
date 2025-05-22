@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import mock_open, patch
-from csi.csi_loader import CsiDataLoader
+from csi.loaders.huawei.csi_loader import CsiDataLoader
 from csi.csi_domain import CsiConfig
 
 @pytest.fixture

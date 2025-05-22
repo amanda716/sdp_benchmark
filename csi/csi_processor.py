@@ -2,9 +2,9 @@
 import os
 import numpy as np
 import pandas as pd
-import csi.csi_loader as csi_loader
+import csi.loaders.huawei.csi_loader as csi_loader
 import csi.csi_domain as csi_domain
-from csi.csi_loader import CsiTruthDataLoader, CsiDataLoader
+from csi.loaders.huawei.csi_loader import CsiTruthDataLoader, CsiDataLoader
 from utils.algo_utils import (
     get_doppler_spectrum_from_tensor,
     interpolate_csi,

@@ -8,7 +8,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torch
 
 from csi.csi_dataset import CSIDataset
-from csi.csi_loader import CsiDataLoader
+from csi.loaders.huawei.csi_loader import CsiDataLoader
 from csi.csi_model import DopplerRSSIFusionModel
 from csi.csi_processor import CsiProcessor
 from utils.algo_utils import doppler_collate_fn
@@ -72,7 +72,8 @@ def evaluate(model, device, val_loader, criterion):
 
 
 def train_and_evaluate():
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = get_device()
+    
     csi_loader = CsiDataLoader({})
     file_data = csi_loader.read_records_from_folder("data")
 
@@ -146,8 +147,21 @@ def train_and_evaluate():
 
     print("训练完成。")
 
+def get_device():
+    """
+    Get the device to be used for training.
+    """
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        print(f"Using GPU: {torch.cuda.get_device_name(0)}")
+    else:
+        device = torch.device("cpu")
+        print("Using CPU")
+    return device
 
 def main():
+    print("Running Environment")
+    print(f"Torch version: {torch.version.__version__}")
     parser = argparse.ArgumentParser(
         description="Process task type and config file.")
     parser.add_argument("--task", type=str, required=True,
