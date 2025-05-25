@@ -10,3 +10,4 @@ pytest
 pandas
 matplotlib
 bitstring
+h5py
