@@ -8,25 +8,25 @@ from sdp.reader.reader import Reader
 FILENAME_STRUCTURE_MAPPING = {
     268: {
         'record_length': 268,
-        'ts_count': 3,        # hour, minute, second
-        'rssi_count': 4,      # 4个RSSI
+        'ts_count': 3,  # hour, minute, second
+        'rssi_count': 4,  # 4个RSSI
         'mcs_count': 1,
         'gain_count': 4,
-        'csi_count': 64*4,    # 256
+        'csi_count': 64 * 4,  # 256
         'csi_num_subcarriers': 64,
         'csi_num_antennas': 4,
-        'target_fs': 100      # 目标采样率 100
+        'target_fs': 100  # 目标采样率 100
     },
     1000: {
         'record_length': 1000,
         'ts_count': 3,
-        'rssi_count': 2,      # 2个RSSI
+        'rssi_count': 2,  # 2个RSSI
         'mcs_count': 1,
         'gain_count': 2,
-        'csi_count': 248*4,   # 992
+        'csi_count': 248 * 4,  # 992
         'csi_num_subcarriers': 248,
         'csi_num_antennas': 4,
-        'target_fs': 20       # 目标采样率 20
+        'target_fs': 20  # 目标采样率 20
     },
     1008: {
         'record_length': 1008,
@@ -34,12 +34,22 @@ FILENAME_STRUCTURE_MAPPING = {
         'rssi_count': 2,
         'mcs_count': 1,
         'gain_count': 2,
-        'csi_count': 250*4,   # 1000
+        'csi_count': 250 * 4,  # 1000
         'csi_num_subcarriers': 250,
         'csi_num_antennas': 4,
         'target_fs': 20
     }
 }
+
+
+def _parse_or_zero(s):
+    try:
+        # Replace 'I' or 'i' with 'j' for complex number notation
+        s_replaced = s.replace('I', 'j').replace('i', 'j')
+        return complex(s_replaced)
+    except ValueError:
+        # Return 0+0j if parsing fails
+        return 0 + 0j
 
 
 class HwOfficeReader(Reader):
@@ -48,6 +58,7 @@ class HwOfficeReader(Reader):
     """
 
     def __init__(self, file_path: str):
+        super().__init__()
         self.file_path = file_path
         self.file_name = os.path.basename(file_path)
         # Extract the record length from the filename
@@ -65,11 +76,12 @@ class HwOfficeReader(Reader):
         """
         Checks if the reader can read the given file path.
 
+        :param self:
         :param path: The file path to check.
         :return: True if the reader can read the file, False otherwise.
         """
         file_name_matched = any(
-            key in path for key in FILENAME_STRUCTURE_MAPPING.keys())
+            str(key) in path for key in FILENAME_STRUCTURE_MAPPING.keys())
         txt_ended = path.endswith('.txt')
         return file_name_matched and txt_ended
 
@@ -158,8 +170,8 @@ class HwOfficeReader(Reader):
             data = data[:length - extra]
 
         for i in range(n_records):
-            start = i*record_length
-            cur_record = data[start:start+record_length]
+            start = i * record_length
+            cur_record = data[start:start + record_length]
 
             # 1) ts
             ts_count = self.get_ts_count()
@@ -174,13 +186,13 @@ class HwOfficeReader(Reader):
             # 3) mcs
             mcs_count = self.get_mcs_count()
             mcs_start = ts_count + rssi_count
-            mcs_vals = cur_record[mcs_start: mcs_start+mcs_count]
+            mcs_vals = cur_record[mcs_start: mcs_start + mcs_count]
             mcs = float(mcs_vals[0]) if mcs_count > 0 else 0.
 
             # 4) gain
             gain_count = self.get_gain_count()
             gain_start = mcs_start + mcs_count
-            gain_vals = cur_record[gain_start: gain_start+gain_count]
+            gain_vals = cur_record[gain_start: gain_start + gain_count]
             gain = [float(x) for x in gain_vals]
 
             # 5) csi
@@ -188,7 +200,7 @@ class HwOfficeReader(Reader):
             csi_start = gain_start + gain_count
             csi_vals = cur_record[csi_start: csi_start + csi_count]
             # 解析成复数
-            csi_list = [self._parse_or_zero(v) for v in csi_vals]
+            csi_list = [_parse_or_zero(v) for v in csi_vals]
             csi_matrix = np.array(csi_list, dtype=complex)
 
             # reshape => (num_subcarriers, num_antennas)
@@ -200,16 +212,8 @@ class HwOfficeReader(Reader):
             final_fs = self.get_target_fs()
 
             # frame
-            frame = HwOfficeFrame(ts=ts, rssi=rssi, mcs=mcs,
-                                  gain=gain, csi_matrix=csi_matrix, fs=final_fs)
+            frame = HwOfficeFrame(ts=ts, rssi=rssi, mcs=mcs, gain=gain, csi_matrix=csi_matrix,
+                                  num_subcarriers=n_subcarriers, num_antennas=n_antennas, fs=final_fs)
             ret_data.add_frame(frame=frame)
 
         return ret_data
-    def _parse_or_zero(self, s):
-        try:
-            # Replace 'I' or 'i' with 'j' for complex number notation
-            s_replaced = s.replace('I', 'j').replace('i', 'j')
-            return complex(s_replaced)
-        except ValueError:
-            # Return 0+0j if parsing fails
-            return 0+0j

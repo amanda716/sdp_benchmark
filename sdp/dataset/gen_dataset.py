@@ -13,9 +13,9 @@ class GenDataset(Dataset):
         return len(self.specs)
 
     def __getitem__(self, idx):
-        spec_i = self.specs[idx]   # (2, freq_dim_i, time_frames)
-        lab_i = self.labels[idx]    # User ID
-        rssi_i = self.rssi[idx]    # (3,)
+        spec_i = self.specs[idx]  # (2, freq_dim_i, time_frames)
+        lab_i = self.labels[idx]  # User ID
+        rssi_i = self.rssi[idx]  # (3,)
         if self.gesture_types is not None:
             # Gesture type for gesture recognition
             gesture_type_i = self.gesture_types[idx]

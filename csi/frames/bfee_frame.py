@@ -23,7 +23,8 @@ class BfeeFrame(CSIFrame):
     """
     Represents a WiDAR Bfee frame.
     """
-    def __init__(self, header_block:list, csi_matrix: np.array):
+    def __init__(self, header_block: tuple, csi_matrix: np.array):
+        super().__init__()
         self.timestamp_low = header_block[0]
         self.bfee_count = header_block[1]
         self.n_rx = header_block[3]

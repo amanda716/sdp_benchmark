@@ -21,10 +21,10 @@ class BfeeReader(Reader):
     """
 
     def __init__(self):
-        pass
+        super().__init__()
 
     @staticmethod
-    def can_read(path: str) -> bool:
+    def can_read(self, file_path: str) -> bool:
         """
         Check if the reader can read the file at the given path.
 
@@ -33,21 +33,25 @@ class BfeeReader(Reader):
 
         Returns:
             bool: True if the reader can read the file, False otherwise.
+            :param self:
+            :param file_path: The path to the file to check
         """
-        data = open(path, 'rb').read(3)
+        with open(file_path, 'rb') as f:
+            data = f.read(3)
         if len(data) < 3:
             return False
         size = SIZE_STRUCT(data[:2])[0]
         code = CODE_STRUCT(data[2:3])[0]
         if size < 20 or code != VALID_BEAMFORMING_MEASUREMENT:
             return False
-        return path.endswith('.dat')
+        return file_path.endswith('.dat')
 
     def read_file(self, file_path: str) -> CSIData:
         file_name = os.path.basename(file_path)
         ret_data = CSIData(file_name)
 
-        data = open(file_path, 'rb').read()
+        with open(file_path, 'rb') as f:
+            data = f.read()
 
         length = len(data)
         cursor = 0

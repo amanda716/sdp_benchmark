@@ -1,4 +1,16 @@
-class Reader:
+from abc import ABC, abstractmethod
+from csi.csi_data import CSIData
+
+
+class Reader(ABC):
     def __init__(self):
-        # TODO document why this method is empty
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def can_read(self, file_path: str) -> bool:
+        pass
+
+    @abstractmethod
+    def read_file(self, file_path: str) -> CSIData:
         pass
