@@ -79,8 +79,8 @@ class BfeeReader(Reader):
         n_components = 2
         pilot_bits = 3
         n_rx_tx_pairs = n_rx * n_tx
-        calculated_byte_length = (n_subcarriers * n_rx_tx_pairs *
-                                  n_bits_per_component * n_components + pilot_bits) + 7 // 8  # type: ignore
+        calculated_byte_length = ((n_subcarriers * n_rx_tx_pairs *
+                                  n_bits_per_component * n_components + pilot_bits) + 7) // 8  # type: ignore
 
         if expected_length != calculated_byte_length:
             return None
