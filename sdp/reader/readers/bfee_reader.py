@@ -20,8 +20,9 @@ class BfeeReader(Reader):
     Reader for WiDAR bfee files.
     """
 
-    def __init__(self):
+    def __init__(self, file_path: str):
         super().__init__()
+        self.file_path = file_path
 
     @classmethod
     def can_read(cls, file_path: str) -> bool:
@@ -47,6 +48,17 @@ class BfeeReader(Reader):
         return file_path.endswith('.dat')
 
     def read_file(self, file_path: str) -> CSIData:
+        """
+        参考 Intel 5300 read_bfee.c/read_bfee_new.c 的逻辑，对单条 BFEE payload 做解析。
+        返回 bfee_dict: {
+          'timestamp_low': int,
+          'Nrx': int, 'Ntx': int,
+          'rssi_a': int, 'rssi_b': int, 'rssi_c': int,
+          'noise': int(有符号),
+          'csi': shape=(30, Nrx, Ntx), dtype=complex64,
+          ...
+        }
+        """
         file_name = os.path.basename(file_path)
         ret_data = CSIData(file_name)
 
@@ -84,11 +96,13 @@ class BfeeReader(Reader):
         pilot_bits = 3
         n_rx_tx_pairs = n_rx * n_tx
         calculated_byte_length = (n_subcarriers * n_rx_tx_pairs *
-                                  n_bits_per_component * n_components + pilot_bits) + 7 // 8  # type: ignore
+                                  bits_per_component * n_components + pilot_bits) + 7 // 8  # type: ignore
 
         if expected_length != calculated_byte_length:
+            print("Error: expected {} but got {}".format(expected_length, calculated_byte_length))
             return None
         if len(payload) != expected_length + header_length:
+            print("Error: payload expected {} but got {}".format(expected_length + header_length, len(payload)))
             return None
 
         csi_bytes = payload[header_length: header_length+expected_length]

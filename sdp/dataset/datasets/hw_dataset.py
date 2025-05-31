@@ -28,3 +28,24 @@ class HwDataset(BaseDataset):
         rssi_tensor = torch.from_numpy(rssi_arr).float()  # (rssi_dim_i,)
 
         return doppler_tensor, rssi_tensor, label
+
+    def doppler_collate_fn(batch):
+        """
+        batch: list of tuples (doppler_tensor, rssi_tensor, label)
+            doppler_tensor: (2, freq_dim_i, 4)
+            rssi_tensor: (rssi_dim_i,)
+            label: int
+        返回:
+            doppler_list: list of torch.Tensor, each shape=(2, freq_dim_i, 4)
+            rssi_list: list of torch.Tensor, each shape=(rssi_dim_i,)
+            label_tensor: torch.Tensor of shape=(B,)
+        """
+        doppler_list = []
+        rssi_list = []
+        label_list = []
+        for (dopp_t, rssi_t, lab) in batch:
+            doppler_list.append(dopp_t)  # (2, freq_dim_i, 4)
+            rssi_list.append(rssi_t)  # (rssi_dim_i,)
+            label_list.append(lab)  # int
+        label_tensor = torch.tensor(label_list, dtype=torch.long)
+        return doppler_list, rssi_list, label_tensor

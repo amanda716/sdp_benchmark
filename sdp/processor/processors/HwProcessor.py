@@ -22,7 +22,14 @@ class HwProcessor(BaseProcessor):
     def __init__(self):
         super().__init__()
 
-    def process(self, data_list: List[CSIData], folder_path):
+    def process(self, data_list: List[CSIData], **kwargs):
+        """
+        hw process flow
+        :param data_list:
+        :param kwargs: for folder_path
+        :return:
+        """
+        folder_path = kwargs.get('folder_path', '')
         # 确保有数据可选
         if data_list:
             random_record = random.choice(data_list)  # 从列表中随机选取一个文件
