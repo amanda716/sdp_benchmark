@@ -122,7 +122,7 @@ class BfeeProcessor(BaseProcessor):
         循环解析 .dat 文件 => bfee 记录列表
         """
         records = []
-        reader = BfeeReader()
+        reader = BfeeReader(filename)
         try:
             rec = reader.read_file(filename)
             if rec is not None:
@@ -170,7 +170,7 @@ class BfeeProcessor(BaseProcessor):
                 orientation = int(m.group(4))
                 data_serial = int(m.group(5))
                 receiver_number = int(m.group(6))
-                return user_id, gesture_type, None, None, None, None
+                return user_id, gesture_type, torso_position, orientation, data_serial, receiver_number
             else:
                 print(f"[Warning] Skipping file {f_name}: Invalid format for Gesture Recognition.")
 

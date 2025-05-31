@@ -4,38 +4,22 @@ from csi.csi_frame import CSIFrame
 
 
 class BfeeFrame(CSIFrame):
-    slots = [
-        "timestamp_low",
-        "bfee_count",
-        "n_rx",
-        "n_tx",
-        "rssi_a",
-        "rssi_b",
-        "rssi_c",
-        "noise",
-        "agc",
-        "antenna_sel",
-        "length",
-        "rate",
-        "csi_matrix"
-    ]
-    
     """
     Represents a WiDAR Bfee frame.
     """
-    def __init__(self, header_block: tuple, csi_matrix: np.array):
+
+    def __init__(self, timestamp_low, bfee_count, n_rx, n_tx,
+                 rssi_a, rssi_b, rssi_c, noise, csi_matrix, agc, antenna_sel, fake_rate):
         super().__init__()
-        self.timestamp_low = header_block[0]
-        self.bfee_count = header_block[1]
-        self.n_rx = header_block[3]
-        self.n_tx = header_block[4]
-        self.rssi_a = header_block[5]
-        self.rssi_b = header_block[6]
-        self.rssi_c = header_block[7]
-        self.noise = header_block[8]
-        self.agc = header_block[9]
-        self.antenna_sel = header_block[10]
-        self.length = header_block[11]
-        self.rate = header_block[12]
+        self.timestamp_low = timestamp_low
+        self.bfee_count = bfee_count
+        self.n_rx = n_rx
+        self.n_tx = n_tx
+        self.rssi_a = rssi_a
+        self.rssi_b = rssi_b
+        self.rssi_c = rssi_c
+        self.noise = noise
         self.csi_matrix = csi_matrix
-        
+        self.agc = agc
+        self.antenna_sel = antenna_sel
+        self.fake_rate = fake_rate
