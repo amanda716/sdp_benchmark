@@ -10,7 +10,7 @@ class WiproxMatReader(Reader):
     """
     Reader for Wiprox .mat files.
     """
-    def __init__(self):
+    def __init__(self, file_path: str):
         super().__init__()
 
     @classmethod

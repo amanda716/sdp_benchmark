@@ -1,7 +1,7 @@
 from sdp.reader.readers import bfee_reader, hw_office_reader, wiprox_mat_reader
 from sdp.processor.processors.BfeeProcessor import BfeeProcessor
 from sdp.processor.processors.HwProcessor import HwProcessor
-from sdp.processor.processors.WiporxProcessor import WiporxProcessor
+from sdp.processor.processors.WiproxProcessor import WiproxProcessor
 
 
 class ProcessorFactory:
@@ -9,7 +9,7 @@ class ProcessorFactory:
     PROCESSORS = {
         bfee_reader.BfeeFrame: BfeeProcessor,
         hw_office_reader.HwOfficeFrame: HwProcessor,
-        wiprox_mat_reader.WiproxMatFrame: WiporxProcessor
+        wiprox_mat_reader.WiproxMatFrame: WiproxProcessor
     }
 
     @classmethod
