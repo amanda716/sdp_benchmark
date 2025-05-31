@@ -23,8 +23,8 @@ class BfeeReader(Reader):
     def __init__(self):
         super().__init__()
 
-    @staticmethod
-    def can_read(self, file_path: str) -> bool:
+    @classmethod
+    def can_read(cls, file_path: str) -> bool:
         """
         Check if the reader can read the file at the given path.
 

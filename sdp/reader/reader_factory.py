@@ -11,8 +11,8 @@ class ReaderFactory:
     @classmethod
     def create_reader(cls, file_path: str):
         for reader_cls in cls.READERS:
-            if reader_cls.can_read(cls, file_path):
-                return reader_cls()
+            if reader_cls.can_read(file_path):
+                return reader_cls(file_path)
         raise ValueError(f"Unsupported file format: {file_path}")
 
     # def get_reader(path: str) -> Reader:

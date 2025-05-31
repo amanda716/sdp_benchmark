@@ -4,7 +4,7 @@ from csi.csi_frame import CSIFrame
 
 
 class BfeeFrame(CSIFrame):
-    __slots__ = [
+    slots = [
         "timestamp_low",
         "bfee_count",
         "n_rx",

@@ -7,14 +7,14 @@ from sdp.processor.processors.WiporxProcessor import WiporxProcessor
 class ProcessorFactory:
     # 处理器映射表（帧类型 -> 处理器实例）
     PROCESSORS = {
-        bfee_reader.BfeeFrame: BfeeProcessor(),
-        hw_office_reader.HwOfficeFrame: HwProcessor(),
-        wiprox_mat_reader.WiproxMatFrame: WiporxProcessor()
+        bfee_reader.BfeeFrame: BfeeProcessor,
+        hw_office_reader.HwOfficeFrame: HwProcessor,
+        wiprox_mat_reader.WiproxMatFrame: WiporxProcessor
     }
 
     @classmethod
     def get_processor(cls, frame):
-        processor = cls.PROCESSORS.get(type(frame))
-        if not processor:
+        processor_class = cls.PROCESSORS.get(type(frame))
+        if not processor_class:
             raise TypeError(f"No processor found for {type(frame).__name__}")
-        return processor
+        return processor_class()

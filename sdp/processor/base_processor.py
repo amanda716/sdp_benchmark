@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
-from csi.csi_frame import CSIFrame
+from typing import List
+
+from csi.csi_data import CSIData
 
 
 class BaseProcessor(ABC):
     @abstractmethod
-    def process(self, frame: CSIFrame):
+    def process(self, data: List[CSIData], folder_path):
         pass

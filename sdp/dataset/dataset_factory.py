@@ -11,9 +11,9 @@ class DatasetFactory:
     }
 
     @classmethod
-    def create_dataset(cls, reader):
+    def create_dataset(cls, process_res: tuple, reader):
         """根据Reader类型创建对应的Dataset实例"""
         dataset_cls = cls.DATASET_MAP.get(type(reader))
         if not dataset_cls:
             raise TypeError(f"dataset {type(reader).__name__} not found")
-        return dataset_cls()
+        return dataset_cls(*process_res)

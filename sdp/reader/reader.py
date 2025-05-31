@@ -6,7 +6,6 @@ class Reader(ABC):
     def __init__(self):
         pass
 
-    @staticmethod
     @abstractmethod
     def can_read(self, file_path: str) -> bool:
         pass

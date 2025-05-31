@@ -1,8 +1,8 @@
 from csi.csi_frame import CSIFrame
 
-class WiproxMatFrame(CSIFrame):
 
-    __slot__ = [
+class WiproxMatFrame(CSIFrame):
+    slot = [
         "iot_csi_data",
         "ue_csi_data",
         "distance_data"

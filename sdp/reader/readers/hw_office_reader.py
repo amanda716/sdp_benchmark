@@ -71,15 +71,15 @@ class HwOfficeReader(Reader):
         if self.file_structure is None:
             raise ValueError(f"Unknown file structure for {self.file_name}")
 
-    @staticmethod
-    def can_read(self, path: str) -> bool:
+    @classmethod
+    def can_read(cls, path: str) -> bool:
         """
         Checks if the reader can read the given file path.
 
         :param self:
         :param path: The file path to check.
         :return: True if the reader can read the file, False otherwise.
-        """
+        # """
         file_name_matched = any(
             str(key) in path for key in FILENAME_STRUCTURE_MAPPING.keys())
         txt_ended = path.endswith('.txt')
@@ -160,7 +160,8 @@ class HwOfficeReader(Reader):
     def read_file(self, file_path: str) -> CSIData:
         file_name = os.path.basename(file_path)
         ret_data = CSIData(file_name)
-        data = open(file_path, 'r').read().strip().split()
+        with open(file_path, 'r') as f:
+            data = f.read().strip().split()
         length = len(data)
         record_length = self.get_record_length()
         n_records = length // record_length

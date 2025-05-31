@@ -5,7 +5,7 @@ class HwOfficeFrame(CSIFrame):
     """
     Hardware Office Frame
     """
-    __slots__ = [
+    slots = [
         "ts",
         "fs",
         "rssi",
