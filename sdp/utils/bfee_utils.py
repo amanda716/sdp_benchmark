@@ -13,7 +13,7 @@ def interpolate_csi(recs, bf_times, uniform_time, Nrx=3, Ntx=1):
     csi_stack = []
     for r in recs:
         # =>(30, Nrx*Ntx)
-        arr = r['csi'].reshape(30, Nrx * Ntx)
+        arr = r.csi_matrix.reshape(30, Nrx * Ntx)
         csi_stack.append(arr)
     csi_stack = np.array(csi_stack, dtype=np.complex128)  # shape=(N,30,Nrx*Ntx)
 
@@ -43,9 +43,9 @@ def interpolate_rssi(recs, bf_times, uniform_time):
     rssi_mat = []
     for r in recs:
         # 可能有空 => 用 max(0, x)
-        a = max(0, r['rssi_a'])
-        b = max(0, r['rssi_b'])
-        c = max(0, r['rssi_c'])
+        a = max(0, r.rssi_a)
+        b = max(0, r.rssi_b)
+        c = max(0, r.rssi_c)
         rssi_mat.append([a, b, c])
     rssi_mat = np.array(rssi_mat, dtype=np.float32)  # shape=(N,3)
 
@@ -203,10 +203,10 @@ def get_time_seconds(recs, unit='us'):
     将 BFEE记录 list => times in second
     """
     if not recs: return np.array([])
-    start_ts = recs[0]['timestamp_low']
+    start_ts = recs[0].timestamp_low
     times=[]
     for r in recs:
-        dt = (r['timestamp_low'] - start_ts)
+        dt = (r.timestamp_low - start_ts)
         if unit=='us':
             dt_s= dt/1e6
         else:

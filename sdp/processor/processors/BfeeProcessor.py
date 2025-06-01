@@ -1,23 +1,24 @@
 import os
 import re
+from typing import List
 
 import h5py
 import numpy as np
 
+from csi.csi_data import CSIData
 from sdp.processor.base_processor import BaseProcessor
-from csi.frames.bfee_frame import BfeeFrame
 from sdp.reader.readers.bfee_reader import BfeeReader
 from sdp.utils.bfee_utils import interpolate_csi, interpolate_rssi, scale_csi_block, compute_doppler_spectrum, \
     build_uniform_time, get_time_seconds
 
 
 class BfeeProcessor(BaseProcessor):
-    def process(self, frame: BfeeFrame, **kwargs):
+    def process(self, data_list: List[CSIData], **kwargs):
         folder_path = kwargs.get('folder_path', '')
         task_type = kwargs.get('task_type', '')
-        final_fs = kwargs.get('final_fs', 1000)
+        final_fs = kwargs.get('final_fs', 1000.0)
 
-        dataset = self.load_data(folder_path, task_type)
+        dataset = self.load_data(data_list, folder_path, task_type)
         all_specs = []
         all_labels = []
         all_rssi = []
@@ -54,8 +55,8 @@ class BfeeProcessor(BaseProcessor):
                 t0, t1 = bf_times[0], bf_times[-1]
                 uniform_time = build_uniform_time(t0, t1, final_fs)
 
-                Nrx = recs[0]['Nrx']
-                Ntx = recs[0]['Ntx']
+                Nrx = recs[0].n_rx
+                Ntx = recs[0].n_tx
                 csi_intp = interpolate_csi(recs, bf_times, uniform_time, Nrx=Nrx, Ntx=Ntx)
                 rssi_intp = interpolate_rssi(recs, bf_times, uniform_time)
 
@@ -83,23 +84,16 @@ class BfeeProcessor(BaseProcessor):
 
         return all_specs, np.array(all_labels, dtype=int), all_rssi
 
-    def load_data(self, folder_path, task_type):
+    def load_data(self, data_list: List[CSIData], folder_path, task_type):
         """
         递归查找 .dat 文件，自动处理不同任务类型的文件。
         """
         all_files = []
         results = []
 
-        # 查找文件夹中的所有文件
-        for root, dirs, files in os.walk(folder_path):
-            for fn in files:
-                if fn.lower().endswith('.dat'):
-                    all_files.append(os.path.join(root, fn))
-
-        # 处理每个文件，根据文件扩展名和任务类型进行处理
-        for file in all_files:
-            # 处理 .dat 文件（Gesture Recognition, Activity Recognition）(widar and gait)
-            recs = self.read_bf_file_adaptive(file)
+        for item in data_list:
+            file = item.file_name
+            recs = item.frames
             parsed_info = self.parse_file_info_from_filename(file, task_type)
             if parsed_info is None:
                 print(f"Skipping file {file}, invalid format or filename does not match expected pattern.")
@@ -116,42 +110,6 @@ class BfeeProcessor(BaseProcessor):
 
         print(f"[Done] Found {len(results)} valid files in {folder_path}.")
         return results
-
-    def read_bf_file_adaptive(self, filename):
-        """
-        循环解析 .dat 文件 => bfee 记录列表
-        """
-        records = []
-        reader = BfeeReader(filename)
-        try:
-            rec = reader.read_file(filename)
-            if rec is not None:
-                records.append(rec)
-            print(f"[Info] {filename}: BFEE records={len(records)}")
-            print(f"\n共读取 {len(records)} 条 CSI 记录。")
-
-            # 打印第一条、第二条和最后一条数据
-            def print_csi_record(rec, index):
-                print(f"Timestamp (timestamp_low): {rec['timestamp_low']}")
-                print(f"bfee_count: {rec['bfee_count']}")
-                print(f"Number of Rx Antennas (Nrx): {rec['Nrx']}")
-                print(f"Number of Tx Antennas (Ntx): {rec['Ntx']}")
-                print(f"RSSI Values: rssi_a={rec['rssi_a']}, rssi_b={rec['rssi_b']}, rssi_c={rec['rssi_c']}")
-                print(f"Noise Value: {rec['noise']}")
-                print(f"CSI Shape: {rec['csi'].shape}")
-                print(f"CSI (full data):")
-                print(rec['csi'])  # 完整展示CSI数据
-
-            # if len(records) >= 2:
-            #   print_csi_record(records[0], "1")
-            #   print_csi_record(records[1], "2")
-            #   print_csi_record(records[-1], "最后")
-            # else:
-            #   print_csi_record(records[0], "1")
-
-        except Exception as e:
-            print(f"[Error] reading {filename}: {e}")
-        return records
 
     def parse_file_info_from_filename(self, f_name, task_type):
         """

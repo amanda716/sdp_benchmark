@@ -69,12 +69,12 @@ class HwProcessor(BaseProcessor):
         all_labels = []
         all_rssi_stats = []
 
-        for file_entry in data_list:
-            file_name = file_entry.file_name
-            data = file_entry.frames
+        for item in data_list:
+            file_name = item.file_name
+            data = item.frames
             prefix = file_name[:-4]
             truth_file = prefix + "_truth.txt"
-            print(f"\n处理文件 {file_name}: ")
+            print(f"\nHwProcessor 处理文件 {file_name}: ")
             if len(data) == 0:
                 print("  数据为空，跳过。")
                 continue
