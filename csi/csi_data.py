@@ -7,7 +7,7 @@ class CSIData:
         """
         Initializes the CSIData object with the provided data.
 
-        :param data: The data to be stored in the CSIData object.
+        :param file_name: The name of a file with raw data.
         """
         self.file_name = file_name
         self.frames = []

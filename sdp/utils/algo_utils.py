@@ -64,7 +64,7 @@ def interpolate_csi(df: DataFrame, target_time, num_subcarriers=30, num_antennas
     for sc in range(num_subcarriers):
         for ant in range(num_antennas):
             # 提取原始 CSI 数据
-            csi_complex = np.array([rec['csi'][sc, ant] for rec in df['data']])
+            csi_complex = np.array([rec.csi_matrix[sc, ant] for rec in df['data']])
             # 提取实部和虚部
             csi_real = csi_complex.real
             csi_imag = csi_complex.imag
@@ -101,16 +101,16 @@ def interpolate_rssi(data, target_time, num_rssi=4):
     rssi_uniform = np.zeros((T, num_rssi), dtype=np.float32)
 
     original_time = np.array(
-        [rec['ts'][0]*3600 + rec['ts'][1]*60 + rec['ts'][2] for rec in data])
+        [rec.ts[0]*3600 + rec.ts[1]*60 + rec.ts[2] for rec in data])
 
     for r in range(num_rssi):
         # 提取第 r 个 RSSI 值，如果某条记录的 RSSI 不足 r+1 个，则使用最后一个 RSSI 值填充
         rssi_values = []
         for rec in data:
-            if len(rec['rssi']) > r:
-                rssi_values.append(rec['rssi'][r])
+            if len(rec.rssi) > r:
+                rssi_values.append(rec.rssi[r])
             else:
-                rssi_values.append(rec['rssi'][-1])
+                rssi_values.append(rec.rssi[-1])
 
         # 创建插值函数
         interp_func = interp1d(original_time, rssi_values,
@@ -397,3 +397,6 @@ def doppler_collate_fn(tuple_list):
         label_list.append(lab)           # int
     label_tensor = torch.tensor(label_list, dtype=torch.long)
     return doppler_list, rssi_list, label_tensor
+
+def dbinv(x_db):
+    return 10**(x_db / 10.0)

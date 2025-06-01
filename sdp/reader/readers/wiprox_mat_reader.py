@@ -10,15 +10,15 @@ class WiproxMatReader(Reader):
     """
     Reader for Wiprox .mat files.
     """
-    def __init__(self, file_path):
-        pass
+    def __init__(self, file_path: str):
+        super().__init__()
 
-    @staticmethod
-    def can_read(path: str) -> bool:
+    @classmethod
+    def can_read(cls, file_path: str) -> bool:
         """
         Check if the reader can read the given file path.
         """
-        return path.endswith('.mat')
+        return file_path.endswith('.mat')
 
     def read_file(self, file_path: str) -> CSIData:
         file_name = os.path.basename(file_path)
@@ -57,9 +57,6 @@ class WiproxMatReader(Reader):
                         distance_data=distance_data
                     )
                     ret_data.add_frame(frame=frame)
-                    
-
-                    
         except Exception as e:
             raise ValueError(f"Error loading .mat file: {file_path}, {str(e)}")
         return ret_data

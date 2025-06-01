@@ -20,11 +20,12 @@ class BfeeReader(Reader):
     Reader for WiDAR bfee files.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, file_path: str):
+        super().__init__()
+        self.file_path = file_path
 
-    @staticmethod
-    def can_read(path: str) -> bool:
+    @classmethod
+    def can_read(cls, file_path: str) -> bool:
         """
         Check if the reader can read the file at the given path.
 
@@ -33,81 +34,122 @@ class BfeeReader(Reader):
 
         Returns:
             bool: True if the reader can read the file, False otherwise.
+            :param self:
+            :param file_path: The path to the file to check
         """
-        data = open(path, 'rb').read(3)
+        with open(file_path, 'rb') as f:
+            data = f.read(3)
         if len(data) < 3:
             return False
         size = SIZE_STRUCT(data[:2])[0]
         code = CODE_STRUCT(data[2:3])[0]
         if size < 20 or code != VALID_BEAMFORMING_MEASUREMENT:
             return False
-        return path.endswith('.dat')
+        return file_path.endswith('.dat')
 
     def read_file(self, file_path: str) -> CSIData:
+        """
+        参考 Intel 5300 read_bfee.c/read_bfee_new.c 的逻辑，对单条 BFEE payload 做解析。
+        返回 bfee_dict: {
+          'timestamp_low': int,
+          'Nrx': int, 'Ntx': int,
+          'rssi_a': int, 'rssi_b': int, 'rssi_c': int,
+          'noise': int(有符号),
+          'csi': shape=(30, Nrx, Ntx), dtype=complex64,
+          ...
+        }
+        """
         file_name = os.path.basename(file_path)
         ret_data = CSIData(file_name)
 
-        data = open(file_path, 'rb').read()
-
-        length = len(data)
-        cursor = 0
-        while length - cursor > 100:
-            size = SIZE_STRUCT(data[cursor:cursor + 2])[0]
-            code = CODE_STRUCT(data[cursor + 2:cursor + 3])[0]
-            cursor += 3
-
-            if code == VALID_BEAMFORMING_MEASUREMENT:
-                all_blocks = data[cursor:cursor + size - 1]
-                header_block = HEADER_STRUCT(all_blocks[:20])
-                data_block = all_blocks[20:]
-                n_tx = header_block[3]
-                n_rx = header_block[4]
-                expected_length = header_block[11]
-                csi_matrix = self.parse_as_bfee_frame(
-                    data_block, n_rx, n_tx, expected_length)
-                if csi_matrix is not None:
-                    frame = BfeeFrame(header_block, csi_matrix)
-                    ret_data.add_frame(frame=frame)
-            cursor += size - 1
+        with open(file_path, 'rb') as f:
+            filesize = os.fstat(f.fileno()).st_size
+            cur = 0
+            while (cur + 3) < filesize:
+                hdr = f.read(3)
+                if len(hdr) < 3: break
+                field_len = (hdr[0] << 8) | hdr[1]
+                code = hdr[2]
+                cur += 3
+                if code == 0xBB:
+                    payload = f.read(field_len - 1)
+                    cur += (field_len - 1)
+                    if len(payload) < (field_len - 1):
+                        break
+                    frame = self.parse_bfee_record(payload)
+                    if frame is not None:
+                        ret_data.add_frame(frame)
+                else:
+                    f.seek(field_len - 1, 1)
+                    cur += (field_len - 1)
+        print(f"[Info] {file_name}: B_FEE records={len(ret_data.frames)}")
         return ret_data
 
     @staticmethod
-    def parse_as_bfee_frame(payload: bytes, n_rx: int, n_tx: int, expected_length: int) -> np.array:
-        header_length = 20
-        n_subcarriers = 30
-        bits_per_component = 8
-        n_components = 2
-        pilot_bits = 3
-        n_rx_tx_pairs = n_rx * n_tx
-        calculated_byte_length = ((n_subcarriers * n_rx_tx_pairs *
-                                  n_bits_per_component * n_components + pilot_bits) + 7) // 8  # type: ignore
-
-        if expected_length != calculated_byte_length:
+    def parse_bfee_record(payload: bytes):
+        """
+        参考 Intel 5300 read_bfee.c/read_bfee_new.c 的逻辑，对单条 BFEE payload 做解析。
+        返回 bfee_dict: {
+          'timestamp_low': int,
+          'Nrx': int, 'Ntx': int,
+          'rssi_a': int, 'rssi_b': int, 'rssi_c': int,
+          'noise': int(有符号),
+          'csi': shape=(30, Nrx, Ntx), dtype=complex64,
+          ...
+        }
+        """
+        if len(payload) < 20:
             return None
-        if len(payload) != expected_length + header_length:
-            return None
 
-        csi_bytes = payload[header_length: header_length+expected_length]
-        csi_matrix = np.zeros((n_subcarriers, n_rx,
-                               n_tx), dtype=np.complex64)
+        timestamp_low = (payload[0] |
+                         (payload[1] << 8) |
+                         (payload[2] << 16) |
+                         (payload[3] << 24)) & 0xffffffff
+        bfee_count = (payload[4] | (payload[5] << 8)) & 0xffff
 
-        csi_bitstream = BitArray(bytes=csi_bytes)
+        Nrx = payload[8]
+        Ntx = payload[9]
+        rssi_a = payload[10]
+        rssi_b = payload[11]
+        rssi_c = payload[12]
+        noise = struct.unpack('b', payload[13:14])[0]
+        agc = payload[14]
+        antenna_sel = payload[15]
+        csi_len = (payload[16] | (payload[17] << 8)) & 0xffff
+        fake_rate = (payload[18] | (payload[19] << 8)) & 0xffff
+
+        calc_len = (30 * (Nrx * Ntx * 8 * 2 + 3) + 7) // 8
+        if csi_len != calc_len: return None
+        if len(payload) < (20 + csi_len): return None
+
+        csi_bytes = payload[20: 20 + csi_len]
+        csi_array = np.zeros((30, Nrx, Ntx), dtype=np.complex64)
 
         bit_index = 0
-        for sc_index in range(n_subcarriers):
-            bit_index += pilot_bits
-            for j in range(n_rx_tx_pairs):
-                real8 = csi_bitstream[bit_index:bit_index +
-                                      bits_per_component].uint
-                imag8 = csi_bitstream[bit_index +
-                                      bits_per_component:bit_index + 2 * bits_per_component].uint
-                bit_index += 2 * bits_per_component
-                if real8 > 127:
-                    real8 -= 256
-                if imag8 > 127:
-                    imag8 -= 256
-                rx_i = j % n_rx
-                tx_i = j // n_tx
-                csi_matrix[sc_index, rx_i, tx_i] = np.complex64(real8, imag8)
 
-        return csi_matrix
+        def get_bit(pos):
+            byte_i = pos // 8
+            if byte_i >= len(csi_bytes):
+                return 0
+            shift = pos % 8
+            return (csi_bytes[byte_i] >> shift) & 0x1
+
+        def get_bits_u8(pos):
+            val = 0
+            for b in range(8):
+                val |= (get_bit(pos + b) << b)
+            return val
+
+        for sc_idx in range(30):
+            bit_index += 3  # skip pilot
+            for j in range(Nrx * Ntx):
+                real8 = get_bits_u8(bit_index)
+                imag8 = get_bits_u8(bit_index + 8)
+                bit_index += 16
+                if real8 & 0x80: real8 -= 256
+                if imag8 & 0x80: imag8 -= 256
+                rx_i = j % Nrx
+                tx_i = j // Nrx
+                csi_array[sc_idx, rx_i, tx_i] = np.complex64(real8 + 1j * imag8)
+        return BfeeFrame(timestamp_low, bfee_count, Nrx, Ntx, rssi_a, rssi_b, rssi_c,
+                         noise, csi_array, agc, antenna_sel, fake_rate)
