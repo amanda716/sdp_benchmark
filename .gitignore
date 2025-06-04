@@ -32,3 +32,11 @@ htmlcov/
 # Miscellaneous
 .DS_Store
 Thumbs.db
+/data/hw_data/home_scenario_1/data/room_A/csi_1008_2023_10_30_1.txt
+/data/hw_data/home_scenario_1/truth/parlor/csi_1008_2023_10_30_1_truth.txt
+/data/hw_data/home_scenario_1/truth/room_A/csi_1008_2023_10_30_1_truth.txt
+/data/hw_data/home_scenario_1/data/room_A/readme.txt
+/sdp_multi_channel_adaptive_csi_datastructure_hw.ipynb
+/data/*
+/wi_prox_ok.ipynb
+/widar3_gaitid_ok.ipynb
