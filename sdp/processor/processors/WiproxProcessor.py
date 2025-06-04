@@ -61,9 +61,11 @@ class WiproxProcessor(BaseProcessor):
 
                                 # Convert complex to float32 by stacking real and imaginary parts
                                 # 将数据转化为包含实部和虚部的 2 通道输入数据
-                                ue_csi_sample = np.stack((ue_csi_sample['real'], ue_csi_sample['imag']), axis=-1).astype(
+                                ue_csi_sample = np.stack((ue_csi_sample['real'], ue_csi_sample['imag']),
+                                                         axis=-1).astype(
                                     np.float32)
-                                iot_csi_sample = np.stack((iot_csi_sample['real'], iot_csi_sample['imag']), axis=-1).astype(
+                                iot_csi_sample = np.stack((iot_csi_sample['real'], iot_csi_sample['imag']),
+                                                          axis=-1).astype(
                                     np.float32)
 
                                 # 将数据保存为字典并添加到结果列表
@@ -78,6 +80,17 @@ class WiproxProcessor(BaseProcessor):
                 num_samples_to_select = min(num_samples, len(data_dict_list))  # Select at most num_samples
                 selected_data = random.sample(data_dict_list, num_samples_to_select)
 
-                return selected_data  # Return the selected samples
+                # 处理成np.array格式
+
+                # 假设数据格式正确，i.e., `iot_csi`, `ue_csi`, 和 `dist_val` 数据可用
+                # 将数据转换为适当的 numpy 数组
+                iot_csi = np.array([data['iot_csi_data'] for data in selected_data], dtype=np.float32)
+                ue_csi = np.array([data['ue_csi_data'] for data in selected_data], dtype=np.float32)
+                dist_val = np.array([data['dist_val'] for data in selected_data], dtype=np.float32)
+
+                res = [{'ue_csi_data': u, 'iot_csi_data': i, 'dist_val': d}
+                       for u, i, d in zip(ue_csi, iot_csi, dist_val)]
+
+                return res  # Return the selected samples
         except Exception as e:
             raise ValueError(f"Error loading .mat file: {file_path}, {str(e)}")
