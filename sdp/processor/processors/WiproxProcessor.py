@@ -62,11 +62,9 @@ class WiproxProcessor(BaseProcessor):
                                 # Convert complex to float32 by stacking real and imaginary parts
                                 # 将数据转化为包含实部和虚部的 2 通道输入数据
                                 ue_csi_sample = np.stack((ue_csi_sample['real'], ue_csi_sample['imag']),
-                                                         axis=-1).astype(
-                                    np.float32)
+                                                         axis=-1).astype(np.float32)
                                 iot_csi_sample = np.stack((iot_csi_sample['real'], iot_csi_sample['imag']),
-                                                          axis=-1).astype(
-                                    np.float32)
+                                                          axis=-1).astype(np.float32)
 
                                 # 将数据保存为字典并添加到结果列表
                                 data_dict = {
