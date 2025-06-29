@@ -4,7 +4,7 @@ from torch.utils.data import Dataset
 
 class CSIDataset(Dataset):
 
-    def __init__(self, csi_data, labels, task_type, transform=None):
+    def __init__(self, csi_data, labels, task_type):
         """
         初始化CSI数据集
 
@@ -12,12 +12,10 @@ class CSIDataset(Dataset):
             csi_data: 预处理后的CSI数据列表 (每个元素是5D数组)
             labels: 标签数组
             task_type: 任务类型 ('classification' 或 'regression')
-            transform: 可选的额外变换
         """
         self.csi_data = csi_data
         self.labels = labels
         self.task_type = task_type
-        self.transform = transform
 
         if len(csi_data) != len(labels):
             raise ValueError("CSI data and labels must have the same length")

@@ -9,7 +9,7 @@ class BfeeFrame(CSIFrame):
     """
 
     def __init__(self, timestamp_low, bfee_count, n_rx, n_tx,
-                 rssi_a, rssi_b, rssi_c, noise, csi_matrix, agc, antenna_sel, fake_rate):
+                 rssi_a, rssi_b, rssi_c, noise, csi_array, agc, antenna_sel, fake_rate):
         super().__init__()
         self.timestamp_low = timestamp_low
         self.bfee_count = bfee_count
@@ -19,7 +19,7 @@ class BfeeFrame(CSIFrame):
         self.rssi_b = rssi_b
         self.rssi_c = rssi_c
         self.noise = noise
-        self.csi_matrix = csi_matrix
+        self.csi_array = csi_array
         self.agc = agc
         self.antenna_sel = antenna_sel
         self.fake_rate = fake_rate
