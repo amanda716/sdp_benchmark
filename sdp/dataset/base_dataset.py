@@ -1,7 +1,5 @@
 from torch.utils.data import Dataset
-from csi.csi_data import CSIData
-import torch
-
+a
 
 class BaseDataset(Dataset):
     def __init__(self):
