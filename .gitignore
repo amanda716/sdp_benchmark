@@ -29,6 +29,9 @@ htmlcov/
 *.cover
 *.py,cover
 
+# vscode
+.vscode
+
 # Miscellaneous
 .DS_Store
 Thumbs.db
